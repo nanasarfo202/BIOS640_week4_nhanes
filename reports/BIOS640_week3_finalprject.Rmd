@@ -12,120 +12,83 @@ output:
     number_sections: true
 --- 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.align = "center")
-library(tidyverse)
-library(scales)
-library(cowplot)
-library(ggpubr)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 8,
+  fig.height = 5
+)
+
+library(dplyr)
+library(ggplot2)
+library(here)
+library(DT)
+library(patchwork)
 
 nhanes <- read_csv("cleaned_NHANES.csv", show_col_types = FALSE)
 diet <- read_csv("diet.csv", show_col_types = FALSE)
 ```
 
+ #Exercise 2.1 {.tabset}
 
+## Individual figures
 
-#Exercise 1
-## Keep adults and set clear category order
-### Import the cleaned dataset
-```{r exercise-1-data}
-nhanes <- read_csv("cleaned_NHANES.csv", show_col_types = FALSE)
-
-nhanes_adults <- nhanes |>
-  filter(age >= 18) |>
-  mutate(
-    gender = factor(gender, levels = c("Male", "Female")),
-    ethnicity_2 = factor(
-      ethnicity_2,
-      levels = c(
-        "Mexican",
-        "Other Hispanic",
-        "White",
-        "Black",
-        "Asian",
-        "Other"
-      )
-    )
-  ) 
-```
-
-## Figure_1: Age distribution by gender
-```{r}
-figure_1 <- ggplot(
-  nhanes_adults,
-  aes(x = age, fill = gender)
-) +
-  geom_histogram(
-    binwidth = 5,
-    boundary = 17.5,
-    position = "dodge",
-    colour = "white"
-  ) +
+```{r individual-figures}
+p_age <- ggplot(nhanes, aes(x = RIDAGEYR)) +
+  geom_histogram(binwidth = 5, fill = "#2C7FB8", color = "white") +
   labs(
-    title = "Age Distribution by Gender",
+    title = "Age Distribution in the NHANES Analytic Sample",
     x = "Age (years)",
-    y = "Number of participants",
-    fill = "Gender"
+    y = "Number of participants"
   ) +
-  scale_fill_manual(values = c("Male" = "#F8766D", "Female" = "#00BFC4")) +
   theme_minimal()
 
-figure_1 
-
-##Figure_2: : Gender composition within ethnicity categories
-figure_2 <- ggplot(
-  nhanes_adults,
-  aes(x = ethnicity_2, fill = gender)
-) +
-  geom_bar(position = "fill", colour = "white") +
-  scale_y_continuous(labels = percent_format()) +
-  scale_fill_manual(values = c("Male" = "#F8766D", "Female" = "#00BFC4")) +
+p_sbp <- ggplot(nhanes, aes(x = BPSysAve)) +
+  geom_histogram(binwidth = 5, fill = "#D95F0E", color = "white") +
   labs(
-    title = "Gender Distribution by Ethnicity",
-    x = "Ethnicity",
-    y = "Proportion of participants",
-    fill = "Gender"
+    title = "Distribution of Average Systolic Blood Pressure",
+    x = "Average systolic blood pressure (mm Hg)",
+    y = "Number of participants"
   ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 30, hjust = 1)
+  theme_minimal()
+
+p_age
+p_sbp
+```
+
+## Combined figures
+
+```{r combined-figures}
+combined_figure <- p_age + p_sbp +
+  plot_annotation(
+    title = "NHANES Participant Age and Systolic Blood Pressure"
   )
 
-figure_2
+combined_figure
 ```
 
+# Exercise 2.2
 
-```{r}
-##Combining the two graphs using cowplot
+## Interactive cleaned NHANES dataset
 
-combined_cowplot <- plot_grid(
-  figure_1,
-  figure_2,
-  nrow = 1,
-  labels = c("A", "B"),
-  align = "h"
-)
-
-combined_cowplot
-
-##combining the graphs with ggarrange
-
-library(ggpubr)
-
-combined_ggpubr <- ggarrange(
-  figure_1,
-  figure_2,
-  ncol = 1,
-  nrow = 2,
-  labels = c("A", "B"),
-  align = "v"
-)
-
-combined_ggpubr
+```{r interactive-table}
+DT::datatable(
+  nhanes,
+  extensions = "Buttons",
+  filter = "top",
+  rownames = FALSE,
+  options = list(
+    pageLength = 10,
+    lengthMenu = c(10, 25, 50, 100),
+    scrollX = TRUE,
+    dom = "Bfrtip",
+    buttons = c("copy", "csv")
+  ),
+  caption = "Cleaned NHANES analytic dataset"
+) |>
+  DT::formatRound(columns = "BPSysAve", digits = 1)
 ```
-
-
-##plot_grid() seems to refer to simply placing two plots next to each other for visual inspection. It’s a straightforward way to see differences but may lack polish in alignment or spacing.
-##ggarrange() Provides a more structured layout. It lets you control the arrangement (rows, columns), add labels (A, B, etc.), and ensure consistent sizing.
 
 
 #Exercise 2
